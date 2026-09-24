@@ -143,7 +143,7 @@ class SqliteBackend(CacheBackend):
     writes is worse than no cache, because the hit-rate number lies.
     """
 
-    def __init__(self, path: str = "gridduck-cache.db", timeout_s: float = 5.0):
+    def __init__(self, path: str = "loadslack-cache.db", timeout_s: float = 5.0):
         d = os.path.dirname(os.path.abspath(path))
         if d:
             os.makedirs(d, exist_ok=True)

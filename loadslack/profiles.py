@@ -162,13 +162,13 @@ class License:
                            expires_at=float(data.get("exp") or 0),
                            seats_mw=float(data.get("mw") or 0),
                            org=str(data.get("org") or ""),
-                           profiles_path=os.environ.get("GRIDDUCK_PROFILES", ""))
+                           profiles_path=os.environ.get("LOADSLACK_PROFILES", ""))
         except Exception:
             return free
 
     @classmethod
     def from_env(cls, public_key_hex: Optional[str] = None) -> "License":
-        return cls.from_key(os.environ.get("GRIDDUCK_LICENSE_KEY", "").strip(),
+        return cls.from_key(os.environ.get("LOADSLACK_LICENSE_KEY", "").strip(),
                             public_key_hex)
 
     @property

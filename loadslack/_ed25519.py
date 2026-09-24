@@ -1,7 +1,7 @@
 """
 Pure-Python Ed25519 (RFC 8032), standard library only.
 
-Why this exists: gridduck has zero dependencies, and licence keys should be
+Why this exists: loadslack has zero dependencies, and licence keys should be
 checkable offline. Verification is what ships to customers. Signing is here
 too so the private licensing tool can share the code, but signing needs a
 private key that never goes in this repo.

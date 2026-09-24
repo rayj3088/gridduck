@@ -4,8 +4,8 @@ import os
 import time
 import unittest
 
-from gridduck import _ed25519 as ed
-from gridduck.profiles import KEY_PREFIX, License, PAID, FREE, _b64e
+from loadslack import _ed25519 as ed
+from loadslack.profiles import KEY_PREFIX, License, PAID, FREE, _b64e
 
 
 def _key(secret, **payload):
@@ -79,12 +79,12 @@ class TestLicense(unittest.TestCase):
         self.assertEqual(License.from_key(_key(self.sk, org="A", exp=0, mw=0), "").tier, FREE)
 
     def test_env_cannot_extend_expiry(self):
-        os.environ["GRIDDUCK_LICENSE_EXPIRES"] = "99999999999"
+        os.environ["LOADSLACK_LICENSE_EXPIRES"] = "99999999999"
         try:
             lic = License.from_key(_key(self.sk, org="A", exp=time.time() - 10, mw=0), self.pub)
             self.assertFalse(lic.active)
         finally:
-            del os.environ["GRIDDUCK_LICENSE_EXPIRES"]
+            del os.environ["LOADSLACK_LICENSE_EXPIRES"]
 
     def test_direct_construction_still_works_for_callers_and_tests(self):
         lic = License(tier=PAID, key="k", expires_at=0)

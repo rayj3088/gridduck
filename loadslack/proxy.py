@@ -55,12 +55,12 @@ def canonical_from_body(body: dict) -> dict:
 
 
 def render_buffered(canon: dict) -> dict:
-    return {"id": "gridduck-cache", "object": "chat.completion",
+    return {"id": "loadslack-cache", "object": "chat.completion",
             "created": int(time.time()), "model": canon.get("model", ""),
             "choices": [{"index": 0, "finish_reason": "stop",
                          "message": {"role": "assistant",
                                      "content": canon.get("content", "")}}],
-            "usage": canon.get("usage") or {}, "gridduck_cached": True}
+            "usage": canon.get("usage") or {}, "loadslack_cached": True}
 
 
 def render_sse(canon: dict) -> bytes:
@@ -69,7 +69,7 @@ def render_sse(canon: dict) -> bytes:
 
     def chunk(delta, finish=None):
         return "data: " + json.dumps({
-            "id": "gridduck-cache", "object": "chat.completion.chunk",
+            "id": "loadslack-cache", "object": "chat.completion.chunk",
             "created": now, "model": model,
             "choices": [{"index": 0, "delta": delta,
                          "finish_reason": finish}]}) + "\n\n"
@@ -126,7 +126,7 @@ def extract_prompt(body: dict) -> Tuple[str, list]:
 
 
 class _Handler(BaseHTTPRequestHandler):
-    server_version = "gridduck/0.3"
+    server_version = "loadslack/0.3"
     sc: Sidechain = None
     upstream: str = ""
     webhook: Optional[WebhookSource] = None
@@ -207,8 +207,8 @@ class _Handler(BaseHTTPRequestHandler):
 
     def _completions(self, path: str) -> None:
         body = self._read_body()
-        site = (self.headers.get("X-Gridduck-Site")
-                or body.get("gridduck_site") or body.get("model") or "default")
+        site = (self.headers.get("X-LoadSlack-Site")
+                or body.get("loadslack_site") or body.get("model") or "default")
         prompt, msgs = extract_prompt(body)
         want_stream = bool(body.get("stream"))
         max_tok = int(body.get("max_tokens")
@@ -217,7 +217,7 @@ class _Handler(BaseHTTPRequestHandler):
         t0 = time.perf_counter()
         turn = self.sc.before(site, prompt, messages=msgs, max_tokens=max_tok,
                               request=body,
-                              key=self.headers.get("X-Gridduck-Key")
+                              key=self.headers.get("X-LoadSlack-Key")
                               or f"{site}:{prompt[:256]}")
 
         if turn.served:
@@ -229,13 +229,13 @@ class _Handler(BaseHTTPRequestHandler):
                 self.send_response(200)
                 self.send_header("Content-Type", "text/event-stream")
                 self.send_header("Cache-Control", "no-cache")
-                self.send_header("X-Gridduck-Served", turn.rot.served_from)
+                self.send_header("X-LoadSlack-Served", turn.rot.served_from)
                 self.send_header("Content-Length", str(len(payload)))
                 self.end_headers()
                 self.wfile.write(payload)
                 return
             return self._json(200, {**render_buffered(canon),
-                                    "gridduck": {
+                                    "loadslack": {
                                         "served_from": turn.rot.served_from}})
 
         if turn.coalesce_ms:
@@ -246,7 +246,7 @@ class _Handler(BaseHTTPRequestHandler):
             ttft = (time.perf_counter() - t0) * 1000.0
             self.sc.after(turn, None, ttft_ms=ttft, total_ms=ttft)
             return self._json(200, {"dry_run": True, "forwarded": fwd,
-                                    "gridduck": {"effort": turn.effort,
+                                    "loadslack": {"effort": turn.effort,
                                                  "stress": turn.stress}})
 
         req = urllib.request.Request(
@@ -277,7 +277,7 @@ class _Handler(BaseHTTPRequestHandler):
             self.send_response(r.status)
             self.send_header("Content-Type",
                              r.headers.get("Content-Type", "application/json"))
-            self.send_header("X-Gridduck-Effort", f"{turn.effort:.3f}")
+            self.send_header("X-LoadSlack-Effort", f"{turn.effort:.3f}")
             self.send_header("Content-Length", str(len(raw)))
             self.end_headers()
             self.wfile.write(raw)
@@ -306,7 +306,7 @@ class _Handler(BaseHTTPRequestHandler):
                              r.headers.get("Content-Type",
                                            "text/event-stream"))
             self.send_header("Cache-Control", "no-cache")
-            self.send_header("X-Gridduck-Effort", f"{turn.effort:.3f}")
+            self.send_header("X-LoadSlack-Effort", f"{turn.effort:.3f}")
             self.end_headers()
             while True:
                 buf = r.read1(8192) if hasattr(r, "read1") else r.read(8192)
@@ -334,33 +334,33 @@ class _Handler(BaseHTTPRequestHandler):
         rot, proof = s["rot"], s["proof"]
         led, d = proof["latency_ledger"], proof.get("ttft_delta_ms") or {}
         lines = [
-            "# TYPE gridduck_grid_stress gauge",
-            f"gridduck_grid_stress {s['grid']['stress']}",
-            "# TYPE gridduck_effort gauge",
-            f"gridduck_effort {s['effort']}",
-            "# TYPE gridduck_grid_coupled gauge",
-            f"gridduck_grid_coupled {1 if s['grid']['coupled'] else 0}",
-            "# TYPE gridduck_eliminations_total counter",
-            f"gridduck_eliminations_total {rot['eliminations']}",
-            "# TYPE gridduck_refusals_total counter",
-            f"gridduck_refusals_total {rot['refusals']}",
-            "# TYPE gridduck_cache_entries gauge",
-            f"gridduck_cache_entries {rot['cache_entries']}",
-            "# TYPE gridduck_inflight_collapsed_total counter",
-            f"gridduck_inflight_collapsed_total {rot['inflight']['collapsed']}",
-            "# TYPE gridduck_inflight_timeouts_total counter",
-            f"gridduck_inflight_timeouts_total {rot['inflight']['timeouts']}",
-            "# TYPE gridduck_latency_net_ms gauge",
-            f"gridduck_latency_net_ms {led['net_ms']}",
-            "# TYPE gridduck_latency_invariant_holds gauge",
-            f"gridduck_latency_invariant_holds {1 if led['invariant_holds'] else 0}",
-            "# TYPE gridduck_ttft_delta_ms gauge",
-            f"gridduck_ttft_delta_ms {d.get('point', 0)}",
-            "# TYPE gridduck_verdict gauge",
+            "# TYPE loadslack_grid_stress gauge",
+            f"loadslack_grid_stress {s['grid']['stress']}",
+            "# TYPE loadslack_effort gauge",
+            f"loadslack_effort {s['effort']}",
+            "# TYPE loadslack_grid_coupled gauge",
+            f"loadslack_grid_coupled {1 if s['grid']['coupled'] else 0}",
+            "# TYPE loadslack_eliminations_total counter",
+            f"loadslack_eliminations_total {rot['eliminations']}",
+            "# TYPE loadslack_refusals_total counter",
+            f"loadslack_refusals_total {rot['refusals']}",
+            "# TYPE loadslack_cache_entries gauge",
+            f"loadslack_cache_entries {rot['cache_entries']}",
+            "# TYPE loadslack_inflight_collapsed_total counter",
+            f"loadslack_inflight_collapsed_total {rot['inflight']['collapsed']}",
+            "# TYPE loadslack_inflight_timeouts_total counter",
+            f"loadslack_inflight_timeouts_total {rot['inflight']['timeouts']}",
+            "# TYPE loadslack_latency_net_ms gauge",
+            f"loadslack_latency_net_ms {led['net_ms']}",
+            "# TYPE loadslack_latency_invariant_holds gauge",
+            f"loadslack_latency_invariant_holds {1 if led['invariant_holds'] else 0}",
+            "# TYPE loadslack_ttft_delta_ms gauge",
+            f"loadslack_ttft_delta_ms {d.get('point', 0)}",
+            "# TYPE loadslack_verdict gauge",
         ]
         for v in ("PASS_FASTER", "PASS_INDISTINGUISHABLE", "INSUFFICIENT_DATA",
                   "FAIL_SLOWER", "FAIL_IDENTITY"):
-            lines.append(f'gridduck_verdict{{verdict="{v}"}} '
+            lines.append(f'loadslack_verdict{{verdict="{v}"}} '
                          f'{1 if proof["verdict"] == v else 0}')
         payload = ("\n".join(lines) + "\n").encode()
         self.send_response(200)

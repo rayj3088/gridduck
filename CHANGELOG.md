@@ -4,7 +4,7 @@
 
 Everything below the line between "works in a demo" and "works in a deployment".
 
-- **Proxy runs the rot engine.** `gridduck serve` now fronts the elimination
+- **Proxy runs the rot engine.** `loadslack serve` now fronts the elimination
   and verification path, not the older quality-tradeoff ladder. This was the
   blocker: the engine was only reachable from Python, so `pip install` plus a
   `base_url` change got the wrong thing.

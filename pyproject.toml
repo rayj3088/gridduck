@@ -3,7 +3,7 @@ requires = ["setuptools>=61"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "gridduck"
+name = "loadslack"
 version = "0.3.0"
 description = "Sidechain compressor for AI compute: duck token flows against grid stress, with auditable curtailment receipts."
 readme = "README.md"
@@ -24,11 +24,11 @@ classifiers = [
 dependencies = []
 
 [project.scripts]
-gridduck = "gridduck.cli:main"
+loadslack = "loadslack.cli:main"
 
 [project.urls]
-Homepage = "https://github.com/rayj3088/gridduck"
-Issues = "https://github.com/rayj3088/gridduck/issues"
+Homepage = "https://github.com/rayj3088/loadslack"
+Issues = "https://github.com/rayj3088/loadslack/issues"
 
 [tool.setuptools.packages.find]
-include = ["gridduck*"]
+include = ["loadslack*"]

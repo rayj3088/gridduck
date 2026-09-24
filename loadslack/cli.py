@@ -1,11 +1,11 @@
 """
-Gridduck command-line interface.
+LoadSlack command-line interface.
 
-  gridduck serve --upstream https://api.openai.com   Run the governing proxy
-  gridduck waste  [--db gridduck-receipts.db]         Print the waste report
-  gridduck verify [--db gridduck-receipts.db]         Check receipt-chain integrity
-  gridduck queue  [--db gridduck-queue.db]            Show deferral-queue stats
-  gridduck upgrade                                    Gridduck Pro upgrade flow
+  loadslack serve --upstream https://api.openai.com   Run the governing proxy
+  loadslack waste  [--db loadslack-receipts.db]         Print the waste report
+  loadslack verify [--db loadslack-receipts.db]         Check receipt-chain integrity
+  loadslack queue  [--db loadslack-queue.db]            Show deferral-queue stats
+  loadslack upgrade                                    LoadSlack Pro upgrade flow
 """
 import argparse
 import json
@@ -20,30 +20,30 @@ from .signal import StaticSource
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(prog="gridduck",
-                                     description="Gridduck: grid-aware AI request governor.")
+    parser = argparse.ArgumentParser(prog="loadslack",
+                                     description="LoadSlack: grid-aware AI request governor.")
     sub = parser.add_subparsers(dest="command")
 
-    serve = sub.add_parser("serve", help="Start the Gridduck governing proxy")
+    serve = sub.add_parser("serve", help="Start the LoadSlack governing proxy")
     serve.add_argument("--upstream", required=True,
                        help="Upstream API base URL, e.g. https://api.openai.com")
     serve.add_argument("--host", default="127.0.0.1")
     serve.add_argument("--port", type=int, default=8787)
-    serve.add_argument("--db", default="gridduck-receipts.db",
+    serve.add_argument("--db", default="loadslack-receipts.db",
                        help="Path to the receipts ledger database")
 
     waste = sub.add_parser("waste", help="Print the waste report from the receipts ledger")
-    waste.add_argument("--db", default="gridduck-receipts.db")
+    waste.add_argument("--db", default="loadslack-receipts.db")
     waste.add_argument("--since", type=float, default=0.0,
                        help="Unix timestamp; report events after this time")
 
     verify = sub.add_parser("verify", help="Check the receipt chain for tampering")
-    verify.add_argument("--db", default="gridduck-receipts.db")
+    verify.add_argument("--db", default="loadslack-receipts.db")
 
     queue = sub.add_parser("queue", help="Show durable deferral-queue stats")
-    queue.add_argument("--db", default="gridduck-queue.db")
+    queue.add_argument("--db", default="loadslack-queue.db")
 
-    sub.add_parser("upgrade", help="Gridduck Pro upgrade flow")
+    sub.add_parser("upgrade", help="LoadSlack Pro upgrade flow")
 
     return parser
 
@@ -52,15 +52,15 @@ def cmd_serve(args) -> int:
     from .proxy import serve as run_proxy
     source = StaticSource()  # swap for a WebhookSource pointed at your grid feed
     sc = Sidechain(source=source)
-    print(f"gridduck: proxying {args.host}:{args.port} -> {args.upstream}")
-    print(f"gridduck: receipts -> {args.db}")
+    print(f"loadslack: proxying {args.host}:{args.port} -> {args.upstream}")
+    print(f"loadslack: receipts -> {args.db}")
     run_proxy(sc, host=args.host, port=args.port, upstream=args.upstream)
     return 0
 
 
 def cmd_waste(args) -> int:
     if not os.path.exists(args.db):
-        print(f"No ledger found at {args.db}. Run 'gridduck serve' first, or pass --db.")
+        print(f"No ledger found at {args.db}. Run 'loadslack serve' first, or pass --db.")
         return 1
     ledger = Ledger(path=args.db)
     try:
@@ -98,10 +98,10 @@ def cmd_queue(args) -> int:
 
 def cmd_upgrade(args) -> int:
     lic = License.from_env()
-    print("--- Gridduck Pro ---")
+    print("--- LoadSlack Pro ---")
     print(json.dumps(lic.status(), indent=2, default=str))
     if not lic.active:
-        print("\nNo active licence found. Set GRIDDUCK_LICENSE_KEY in your "
+        print("\nNo active licence found. Set LOADSLACK_LICENSE_KEY in your "
              "environment or .env file. Free-tier features remain fully active.")
     return 0
 

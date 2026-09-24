@@ -85,7 +85,7 @@ def _digest(prev_hash: str, ts: float, kind: str, body: str) -> str:
 
 
 class Ledger:
-    def __init__(self, path: str = "gridduck-receipts.db",
+    def __init__(self, path: str = "loadslack-receipts.db",
                  hmac_key: Optional[bytes] = None, key_id: str = "default"):
         self.path = path
         self.key_id = key_id
@@ -103,7 +103,7 @@ class Ledger:
     @staticmethod
     def _load_or_create_key(db_path: str) -> bytes:
         key_path = os.path.splitext(db_path)[0] + ".key"
-        env = os.environ.get("GRIDDUCK_HMAC_KEY")
+        env = os.environ.get("LOADSLACK_HMAC_KEY")
         if env:
             return env.encode()
         if os.path.exists(key_path):

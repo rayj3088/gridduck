@@ -1,4 +1,4 @@
-# gridduck
+# loadslack
 
 A sidechain compressor for AI compute.
 
@@ -16,23 +16,23 @@ Zero dependencies. Python 3.9+.
 ## Install
 
 ```bash
-pip install gridduck                       # once published
-pip install git+https://github.com/rayj3088/gridduck.git   # from source, today
+pip install loadslack                       # once published
+pip install git+https://github.com/rayj3088/loadslack.git   # from source, today
 ```
 
 No wheels to audit, no transitive dependencies, nothing to review but the
 Python standard library and this repo.
 
 ```bash
-gridduck waste      # rot elimination + live proof, free vs paid tier
-gridduck demo       # a simulated ISO curtailment day
+loadslack waste      # rot elimination + live proof, free vs paid tier
+loadslack demo       # a simulated ISO curtailment day
 ```
 
 ## Put it in front of your traffic
 
 ```bash
-gridduck serve --upstream https://api.openai.com \
-               --cache /var/lib/gridduck/cache.db \
+loadslack serve --upstream https://api.openai.com \
+               --cache /var/lib/loadslack/cache.db \
                --signal-file /var/run/grid.json
 ```
 
@@ -49,8 +49,8 @@ Node and every other language need **nothing installed** — the driver is a
 process, not a library, and speaks the OpenAI-compatible wire format. There is
 no npm package to publish because there is nothing for it to do.
 
-Optional headers: `X-Gridduck-Site` groups traffic for per-pipeline statistics
-(defaults to the model name); `X-Gridduck-Key` overrides holdout assignment.
+Optional headers: `X-LoadSlack-Site` groups traffic for per-pipeline statistics
+(defaults to the model name); `X-LoadSlack-Key` overrides holdout assignment.
 
 Streaming works. Chunks relay as they arrive, TTFT is measured from the first
 byte upstream, and a cache hit on a streaming request is re-emitted *as* a
@@ -145,7 +145,7 @@ copied — it is **calibration that decays**.
 ## Using it
 
 ```python
-from gridduck import Sidechain
+from loadslack import Sidechain
 
 sc = Sidechain()                                   # free tier
 t = sc.before("support-bot", prompt, messages=msgs, max_tokens=800)
@@ -167,7 +167,7 @@ print(sc.datasheet())                              # the live proof line
 | `POST /signal` | push grid stress or a curtailment order (or wire OpenADR to it) |
 
 The verdict is exported as a labelled gauge, so
-`gridduck_verdict{verdict="FAIL_SLOWER"} == 1` is an alert you can page on. A
+`loadslack_verdict{verdict="FAIL_SLOWER"} == 1` is an alert you can page on. A
 driver that can page you when it is failing is a different object from one that
 asks you to trust it.
 
@@ -180,7 +180,7 @@ trade quality for joules, which is why it is opt-in and separate.
 ### Why a compressor and not a circuit breaker
 
 A breaker is a step function: on, off, application dies. A resistor is a curve.
-`gridduck` implements a real compressor — threshold, ratio, soft knee, attack,
+`loadslack` implements a real compressor — threshold, ratio, soft knee, attack,
 release, hold — because the failure modes of naive throttling are the failure
 modes of naive audio compression: pumping, chatter, and holes you can hear.
 
@@ -225,17 +225,17 @@ product to hit a number.
 **As a proxy.** Point any OpenAI-compatible client at it:
 
 ```
-gridduck serve --upstream https://api.openai.com --signal-file /var/run/grid.json
+loadslack serve --upstream https://api.openai.com --signal-file /var/run/grid.json
 export OPENAI_BASE_URL=http://127.0.0.1:8787/v1
 ```
 
-Tag traffic with `X-Gridduck-Class: interactive | near_realtime | background | batch`.
+Tag traffic with `X-LoadSlack-Class: interactive | near_realtime | background | batch`.
 Untagged traffic defaults to `interactive` and is therefore never deferred.
 
 **As a library.**
 
 ```python
-from gridduck import Governor, RequestClass, FileSource
+from loadslack import Governor, RequestClass, FileSource
 
 gov = Governor(source=FileSource("/var/run/grid.json"))
 d = gov.admit(model="frontier", request_class=RequestClass.BACKGROUND,
@@ -271,7 +271,7 @@ if q.reserve(task_id, "send-invoice-881", "email"):
 `reserve()` returns `False` if that key already committed — your idempotency
 check on resume. Intents reserved but never committed are in an unknown state:
 they are **not** replayed and **not** dropped. They surface in
-`gridduck queue --orphans` for reconciliation, because a human or a downstream
+`loadslack queue --orphans` for reconciliation, because a human or a downstream
 idempotency check is the only correct arbiter. An honest unknown beats a
 confident duplicate.
 
@@ -285,7 +285,7 @@ the previous row's — so altering or deleting any row invalidates everything
 after it. The head is HMAC-signed with a key the operator holds.
 
 ```
-gridduck verify --ledger receipts.db --report-since 1789900000
+loadslack verify --ledger receipts.db --report-since 1789900000
 ```
 
 ## What is not calibrated
@@ -319,7 +319,7 @@ The calibration path: meter a rack, drive a known token mix through it, call
 
 ## Support & Sponsorship
 
-Gridduck is open-source software built to reduce AI compute overhead and promote sustainable energy practices. If this project helps you optimize your infrastructure or save energy, consider supporting ongoing development!
+LoadSlack is open-source software built to reduce AI compute overhead and promote sustainable energy practices. If this project helps you optimize your infrastructure or save energy, consider supporting ongoing development!
 
 * 💳 **PayPal**: [paypal.me/rayj3088](https://paypal.me/rayj3088)
 

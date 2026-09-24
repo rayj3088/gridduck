@@ -76,7 +76,7 @@ class Sidechain:
                  license: Optional[License] = None,
                  rot_config: Optional[RotConfig] = None,
                  holdout_fraction: float = 0.03,
-                 ledger_path: str = "gridduck-receipts.db",
+                 ledger_path: str = "loadslack-receipts.db",
                  compressor: Optional[CompressorConfig] = None,
                  profiles_path: str = "",
                  backend: Optional[CacheBackend] = None,

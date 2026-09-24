@@ -83,7 +83,7 @@ class Task:
 
 
 class DeferQueue:
-    def __init__(self, path: str = "gridduck-queue.db",
+    def __init__(self, path: str = "loadslack-queue.db",
                  lease_s: float = 300.0, max_attempts: int = 5):
         d = os.path.dirname(os.path.abspath(path))
         if d:
