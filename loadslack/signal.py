@@ -1,83 +1,91 @@
+"""
+Grid signal types and sources.
+
+GridSignal.stress is the sidechain's only real input: 0.0 (calm) to 1.0
+(extreme). Everything else rides alongside it -- carbon intensity, region,
+and an optional hard curtailment order from a utility, ISO, or demand
+response aggregator.
+"""
+from __future__ import annotations
+
+import threading
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Optional
 
 
 @dataclass
 class CurtailmentOrder:
-    order_id: str
-    target_reduction_pct: float
-    duration_seconds: int
+    """A hard instruction from a utility/ISO/DR aggregator: reduce load now."""
+    source: str = "unknown"
     issued_at: float = 0.0
+    expires_at: float = 0.0
+    reduction_fraction: Optional[float] = None  # 0..1, e.g. 0.3 = cut 30%
+    target_mw: Optional[float] = None           # absolute cap
+    shed_mw: Optional[float] = None             # absolute amount to shed
+    event_id: str = ""
 
-    def __post_init__(self):
-        if self.issued_at == 0.0:
-            self.issued_at = time.time()
+    def active(self, now: Optional[float] = None) -> bool:
+        now = time.time() if now is None else now
+        return self.issued_at <= now < self.expires_at
 
-    @property
-    def is_expired(self) -> bool:
-        return time.time() > (self.issued_at + self.duration_seconds)
+    def as_fraction(self, baseline_mw: Optional[float] = None) -> Optional[float]:
+        """Express the order as a 0..1 reduction fraction, whatever units it
+        was issued in. None if it can't be resolved (an absolute target/shed
+        amount given with no known baseline)."""
+        if self.reduction_fraction is not None:
+            return max(0.0, min(1.0, self.reduction_fraction))
+        if baseline_mw and baseline_mw > 0:
+            if self.shed_mw is not None:
+                return max(0.0, min(1.0, self.shed_mw / baseline_mw))
+            if self.target_mw is not None:
+                return max(0.0, min(1.0, 1.0 - (self.target_mw / baseline_mw)))
+        return None
 
 
 @dataclass
 class GridSignal:
-    load_factor: float  # 0.0 to 1.0 (1.0 = peak load)
-    carbon_intensity_g_kwh: float  # gCO2/kWh
-    electricity_price_mwh: float  # $ per MWh
-    curtailment: Optional[CurtailmentOrder] = None
-    timestamp: float = 0.0
-
-    def __post_init__(self):
-        if self.timestamp == 0.0:
-            self.timestamp = time.time()
+    stress: float = 0.0                       # 0..1; the compressor's real input
+    region: str = "local"
+    carbon_g_per_kwh: Optional[float] = None
+    order: Optional[CurtailmentOrder] = None
+    stale: bool = False
+    timestamp: float = field(default_factory=time.time)
 
 
 class SignalSource:
-    def get_signal(self) -> GridSignal:
+    def read(self) -> GridSignal:
         raise NotImplementedError
 
-
-# Alias for compatibility
-BaseSignalSource = SignalSource
+    def close(self) -> None:
+        pass
 
 
 class StaticSource(SignalSource):
-    def __init__(self, load_factor: float = 0.2, carbon_intensity: float = 150.0, price: float = 45.0):
-        self.load_factor = load_factor
-        self.carbon_intensity = carbon_intensity
-        self.price = price
-        self.active_curtailment: Optional[CurtailmentOrder] = None
+    """A fixed stress value that never changes on its own. The free-tier
+    default is stress=0.0 -- calm, so the driver never ducks anything until
+    something real is wired in."""
+    def __init__(self, stress: float = 0.0, region: str = "local"):
+        self.stress = stress
+        self.region = region
 
-    def set_curtailment(self, order: Optional[CurtailmentOrder]):
-        self.active_curtailment = order
-
-    def get_signal(self) -> GridSignal:
-        if self.active_curtailment and self.active_curtailment.is_expired:
-            self.active_curtailment = None
-
-        return GridSignal(
-            load_factor=self.load_factor,
-            carbon_intensity_g_kwh=self.carbon_intensity,
-            electricity_price_mwh=self.price,
-            curtailment=self.active_curtailment,
-            timestamp=time.time()
-        )
-
-
-# Alias for compatibility
-StaticSignalSource = StaticSource
+    def read(self) -> GridSignal:
+        return GridSignal(stress=self.stress, region=self.region)
 
 
 class WebhookSource(SignalSource):
-    def __init__(self, initial_signal: Optional[GridSignal] = None):
-        self._current_signal = initial_signal or GridSignal(
-            load_factor=0.2,
-            carbon_intensity_g_kwh=150.0,
-            electricity_price_mwh=45.0
-        )
+    """Holds whatever signal was last pushed to it -- typically by proxy.py's
+    /signal endpoint, itself driven by a utility webhook or a demand-response
+    feed. Thread-safe: push() and read() are called from different threads
+    (the HTTP handler thread and the request-serving thread)."""
+    def __init__(self, initial: Optional[GridSignal] = None):
+        self._lock = threading.Lock()
+        self._current = initial or GridSignal()
 
-    def update_signal(self, signal: GridSignal):
-        self._current_signal = signal
+    def push(self, signal: GridSignal) -> None:
+        with self._lock:
+            self._current = signal
 
-    def get_signal(self) -> GridSignal:
-        return self._current_signal
+    def read(self) -> GridSignal:
+        with self._lock:
+            return self._current

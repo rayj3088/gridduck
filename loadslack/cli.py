@@ -45,6 +45,8 @@ def build_parser() -> argparse.ArgumentParser:
 
     sub.add_parser("upgrade", help="LoadSlack Pro upgrade flow")
 
+    sub.add_parser("demo", help="Run a self-contained simulated grid-stress walkthrough")
+
     return parser
 
 
@@ -106,6 +108,11 @@ def cmd_upgrade(args) -> int:
     return 0
 
 
+def cmd_demo(args) -> int:
+    from .demo import run as run_demo
+    return run_demo()
+
+
 def main() -> None:
     parser = build_parser()
     args = parser.parse_args()
@@ -115,7 +122,7 @@ def main() -> None:
         sys.exit(0)
 
     handlers = {"serve": cmd_serve, "waste": cmd_waste, "verify": cmd_verify,
-               "queue": cmd_queue, "upgrade": cmd_upgrade}
+               "queue": cmd_queue, "upgrade": cmd_upgrade, "demo": cmd_demo}
     sys.exit(handlers[args.command](args))
 
 

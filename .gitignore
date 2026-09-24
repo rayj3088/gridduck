@@ -9,3 +9,4 @@ dist/
 build/
 *.egg-info/
 PRIVATE-do-not-commit/
+loadslack-demo-receipts.db
