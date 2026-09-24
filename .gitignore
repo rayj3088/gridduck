@@ -1,0 +1,11 @@
+*.db*
+*.key
+__pycache__/
+.env
+.DS_Store
+repomix-output.xml
+*.pyc
+dist/
+build/
+*.egg-info/
+PRIVATE-do-not-commit/
